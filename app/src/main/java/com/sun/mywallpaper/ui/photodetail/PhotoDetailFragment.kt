@@ -1,6 +1,11 @@
 package com.sun.mywallpaper.ui.photodetail
 
+import android.app.Activity
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
@@ -16,24 +21,65 @@ import com.sun.mywallpaper.base.BaseFragment
 import com.sun.mywallpaper.base.FragmentInteractionListener
 import com.sun.mywallpaper.data.model.Photo
 import com.sun.mywallpaper.databinding.FragmentPhotoDetailBinding
+import com.sun.mywallpaper.di.KoinNames
 import com.sun.mywallpaper.ui.editphoto.PhotoEditorFragment
 import com.sun.mywallpaper.ui.userdetail.UserDetailFragment
-import com.sun.mywallpaper.util.Constants
+import com.sun.mywallpaper.util.*
 import com.sun.mywallpaper.viewmodel.PhotoViewModel
 import kotlinx.android.synthetic.main.fragment_photo_detail.*
+import org.koin.android.ext.android.get
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.core.qualifier.named
+import java.io.File
 
 class PhotoDetailFragment : BaseFragment<FragmentPhotoDetailBinding, PhotoViewModel>(),
-    View.OnClickListener {
+    View.OnClickListener,
+    WallpaperDialogFragment.OnWallpaperDialogFragmentInteractionListener {
 
     override val layoutResource: Int
         get() = R.layout.fragment_photo_detail
     override val viewModel: PhotoViewModel by viewModel()
 
+    private val downloadHelper: DownloadHelper = get(named(KoinNames.DOWNLOAD_HELPER))
     private var listener: OnPhotoDetailFragmentInteractionListener? = null
 
     private val photo by lazy {
         arguments?.getParcelable<Photo>(PHOTO_DETAIL)
+    }
+
+    private var wallpaperDialogFragment: WallpaperDialogFragment? = null
+    private lateinit var currentAction: DownloadType
+    private var downloadReference: Long = 0
+    private val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+    private val receiver = object : BroadcastReceiver() {
+
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val reference = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (downloadReference == reference) {
+                val cursor = downloadHelper.getDownloadCursor(downloadReference)
+                cursor?.let {
+                    if (downloadHelper.getDownloadStatus(it) == DownloadStatus.SUCCESS) {
+                        setAsWallpaper()
+                    }
+                    it.close()
+                }
+                if (currentAction == DownloadType.WALLPAPER) {
+                    wallpaperDialogFragment?.dismiss()
+                }
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (resultCode == Activity.RESULT_OK && requestCode == 12345) {
+            val uri = data?.data
+            if (currentAction == DownloadType.WALLPAPER) {
+                context?.let {
+                    startActivity(Utils.wallpaperIntent(it, uri!!))
+                }
+                wallpaperDialogFragment?.setDownloadFinished(true)
+            }
+        }
     }
 
     override fun onAttach(context: Context) {
@@ -43,6 +89,16 @@ class PhotoDetailFragment : BaseFragment<FragmentPhotoDetailBinding, PhotoViewMo
         } else {
             throw RuntimeException("$context $ERROR_IMPLEMENT_FRAGMENT_INTERACTION_LISTENER")
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        activity?.registerReceiver(receiver, filter)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        activity?.unregisterReceiver(receiver)
     }
 
     override fun initComponents() {
@@ -62,6 +118,17 @@ class PhotoDetailFragment : BaseFragment<FragmentPhotoDetailBinding, PhotoViewMo
                 onBackPressed()
                 true
             }
+
+            R.id.actionViewOnUnsplash -> {
+                startActivity(Utils.viewIntent(photo?.links?.html))
+                true
+            }
+
+            R.id.actionShare -> {
+                startActivity(Utils.shareIntent(photo?.links?.html))
+                true
+            }
+
             else -> super.onOptionsItemSelected(item)
         }
 
@@ -81,10 +148,16 @@ class PhotoDetailFragment : BaseFragment<FragmentPhotoDetailBinding, PhotoViewMo
 
             R.id.fabDownload -> {
                 fabMenu.close(true)
+                currentAction = DownloadType.DOWNLOAD
+                photo?.let { downloadImage(it.urls.regular, DownloadType.DOWNLOAD) }
             }
 
             R.id.fabWallpaper -> {
                 fabMenu.close(true)
+                currentAction = DownloadType.WALLPAPER
+                photo?.let {
+                    downloadImage(it.urls.regular, DownloadType.WALLPAPER)
+                }
             }
 
             R.id.fabInfo -> {
@@ -98,6 +171,10 @@ class PhotoDetailFragment : BaseFragment<FragmentPhotoDetailBinding, PhotoViewMo
     }
 
     override fun onBackPressed() = getNavigationManager().navigateBack()
+
+    override fun onCancel() {
+        downloadHelper.removeDownloadRequest(downloadReference)
+    }
 
     private fun initToolbar() {
         (activity as AppCompatActivity).apply {
@@ -142,6 +219,42 @@ class PhotoDetailFragment : BaseFragment<FragmentPhotoDetailBinding, PhotoViewMo
         imagePhoto.setOnClickListener(this)
         imageUser.setOnClickListener(this)
         textUserName.setOnClickListener(this)
+    }
+
+    private fun downloadImage(url: String, downloadType: DownloadType) {
+        val filename = photo?.id + Constants.DOWNLOAD_PHOTO_FORMAT
+
+        if (downloadHelper.fileExists(filename)) {
+            if (downloadType == DownloadType.WALLPAPER) {
+                context?.let {
+                    val uri = StringUtils.getFileURi(it, filename)
+                    startActivity(Utils.wallpaperIntent(it, uri))
+                }
+            } else
+                context?.showToast(getString(R.string.download_fail_message))
+        } else {
+            if (downloadType == DownloadType.WALLPAPER) {
+                wallpaperDialogFragment = WallpaperDialogFragment()
+                wallpaperDialogFragment?.setFragmentInteractionListener(this)
+                wallpaperDialogFragment?.show(childFragmentManager, null)
+            } else {
+                context?.showToast(getString(R.string.download_started_message))
+            }
+            downloadReference =
+                downloadHelper.addDownloadRequest(url, filename, downloadType)
+        }
+    }
+
+    private fun setAsWallpaper() {
+        val file = File(downloadHelper.getFilePath(downloadReference))
+        context?.let {
+            it.showToast(getString(R.string.download_finished_message))
+            val uri = StringUtils.getFileURi(it, file)
+            if (currentAction == DownloadType.WALLPAPER) {
+                startActivity(Utils.wallpaperIntent(it, uri))
+                wallpaperDialogFragment?.setDownloadFinished(true)
+            }
+        }
     }
 
     interface OnPhotoDetailFragmentInteractionListener : FragmentInteractionListener

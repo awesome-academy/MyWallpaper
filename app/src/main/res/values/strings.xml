@@ -45,8 +45,11 @@
     <string name="photo_info">Info</string>
     <string name="set_as_wallpaper">Set as wallpaper</string>
     <string name="download">Download</string>
+    <string name="save">Save</string>
     <string name="likes">%1$s likes</string>
     <string name="downloads">%1$s downloads</string>
+    <string name="setting_wallpaper">Setting wallpaper</string>
+    <string name="cancel">Cancel</string>
 
     <string name="done">Done</string>
     <string name="opacity">Opacity</string>
@@ -56,4 +59,12 @@
     <string name="edit_tool_eraser">Eraser</string>
     <string name="edit_tool_filter">Filter</string>
     <string name="edit_tool_emoji">Emoji</string>
+
+    <string name="download_started_message">Download started</string>
+    <string name="download_finished_message">Download finished</string>
+    <string name="download_fail_message">"This photo has already been downloaded"</string>
+    <string name="cache_clear_message">"Cache cleared"</string>
+    <string name="save_message">"Are you want to save this photo?"</string>
+    <string name="yes">"Yes"</string>
+    <string name="no">"No"</string>
 </resources>

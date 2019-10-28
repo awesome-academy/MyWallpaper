@@ -43,4 +43,6 @@ object KoinNames {
     const val FILTER_ADAPTER = "name_filter_adapter"
     const val COLOR_PICKER_ADAPTER = "name_color_picker_adapter"
     const val EMOJI_ADAPTER = "name_emoji_adapter"
+
+    const val  DOWNLOAD_HELPER= "name_download_helper"
 }

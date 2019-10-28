@@ -1,11 +1,14 @@
 package com.sun.mywallpaper.ui.collectiondetail
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,6 +20,7 @@ import com.sun.mywallpaper.base.BaseFragment
 import com.sun.mywallpaper.base.FragmentInteractionListener
 import com.sun.mywallpaper.base.LastItemListener
 import com.sun.mywallpaper.base.OnRecyclerItemClickListener
+import com.sun.mywallpaper.data.api.ApiConstants
 import com.sun.mywallpaper.data.model.Collection
 import com.sun.mywallpaper.data.model.Photo
 import com.sun.mywallpaper.databinding.FragmentCollectionDetailBinding

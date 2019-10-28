@@ -17,6 +17,7 @@ import com.sun.mywallpaper.base.FragmentInteractionListener
 import com.sun.mywallpaper.databinding.FragmentHomeBinding
 import com.sun.mywallpaper.ui.search.SearchFragment
 import com.sun.mywallpaper.util.Utils
+import com.sun.mywallpaper.util.showToast
 import com.sun.mywallpaper.viewmodel.HomeViewModel
 import kotlinx.android.synthetic.main.fragment_home.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -31,7 +32,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding, HomeViewModel>(), View.On
 
     private var listener: OnHomeFragmentInteractionListener? = null
     private lateinit var pagerAdapter: PagerAdapter
-    private lateinit var clearCache: AsyncTask<Unit, Unit, Unit>
+    private var clearCache: AsyncTask<Unit, Unit, Unit>? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -49,7 +50,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding, HomeViewModel>(), View.On
 
     override fun onPause() {
         super.onPause()
-        clearCache.cancel(true)
+        clearCache?.cancel(true)
     }
 
     override fun initComponents() {
@@ -153,7 +154,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding, HomeViewModel>(), View.On
         }
 
         override fun onPostExecute(result: Unit?) {
-            Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
+            context.showToast(context.getString(R.string.cache_clear_message))
         }
     }
 

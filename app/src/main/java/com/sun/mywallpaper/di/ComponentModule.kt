@@ -1,6 +1,8 @@
 package com.sun.mywallpaper.di
 
 import com.sun.mywallpaper.adapter.*
+import com.sun.mywallpaper.util.DownloadHelper
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
@@ -56,5 +58,9 @@ val componentModule = module {
 
     single(named(KoinNames.EMOJI_ADAPTER)) {
         EmojiAdapter()
+    }
+
+    single(named(KoinNames.DOWNLOAD_HELPER)) {
+        DownloadHelper(androidContext())
     }
 }

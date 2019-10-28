@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import com.sun.mywallpaper.util.Constants
+import com.sun.mywallpaper.util.showToast
 
 
 abstract class BaseFragment<VB : ViewDataBinding, VM : BaseViewModel> : Fragment(), LifecycleOwner {
@@ -79,7 +80,7 @@ abstract class BaseFragment<VB : ViewDataBinding, VM : BaseViewModel> : Fragment
         viewModel.messageNotification.observe(this, Observer {
             if (it == Constants.MESSAGE_DATA_NOT_FOUND)
                 loadMore = false
-            toast(it)
+            context?.showToast(it)
         })
     }
 
@@ -89,10 +90,6 @@ abstract class BaseFragment<VB : ViewDataBinding, VM : BaseViewModel> : Fragment
     open fun onBackPressed() = false
 
     fun getNavigationManager(): NavigationManager = navigationManagerInner
-
-    private fun toast(message: String) = context?.let {
-        Toast.makeText(it, message, Toast.LENGTH_SHORT).show()
-    }
 
     companion object {
         private const val ERROR_IMPLEMENT_HAS_NAVIGATION_MANAGER =

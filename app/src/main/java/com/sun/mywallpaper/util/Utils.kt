@@ -2,6 +2,7 @@ package com.sun.mywallpaper.util
 
 import android.Manifest
 import android.app.Activity
+import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -92,6 +93,12 @@ object Utils {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, url + ApiConstants.UNSPLASH_UTM_PARAMETERS)
     }
+
+    fun wallpaperIntent(context: Context, uri: Uri): Intent =
+        WallpaperManager.getInstance(context).getCropAndSetWallpaperIntent(uri).apply {
+            setDataAndType(uri, "image/*")
+            putExtra("mimeType", "image/*")
+        }
 
     private fun checkSelfPermission(activity: Activity) = ActivityCompat.checkSelfPermission(
         activity,

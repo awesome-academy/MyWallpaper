@@ -2,8 +2,10 @@ package com.sun.mywallpaper.ui.editphoto
 
 import android.content.Context
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import com.bumptech.glide.Glide
 import com.sun.mywallpaper.R
 import com.sun.mywallpaper.adapter.FilterAdapter
@@ -14,13 +16,16 @@ import com.sun.mywallpaper.data.model.Photo
 import com.sun.mywallpaper.databinding.FragmentPhotoEditorBinding
 import com.sun.mywallpaper.di.KoinNames
 import com.sun.mywallpaper.util.Constants
+import com.sun.mywallpaper.util.StringUtils
 import com.sun.mywallpaper.util.Utils
+import com.sun.mywallpaper.util.showToast
 import com.sun.mywallpaper.viewmodel.PhotoViewModel
 import ja.burhanrashid52.photoeditor.*
 import kotlinx.android.synthetic.main.fragment_photo_editor.*
 import org.koin.android.ext.android.get
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.qualifier.named
+import java.io.File
 
 class PhotoEditorFragment : BaseFragment<FragmentPhotoEditorBinding, PhotoViewModel>(),
     View.OnClickListener,
@@ -127,6 +132,7 @@ class PhotoEditorFragment : BaseFragment<FragmentPhotoEditorBinding, PhotoViewMo
             }
 
             R.id.buttonDownload -> {
+                showSaveDialog()
             }
 
             R.id.buttonBrush -> {
@@ -170,8 +176,6 @@ class PhotoEditorFragment : BaseFragment<FragmentPhotoEditorBinding, PhotoViewMo
                 childFragmentManager,
                 emojiBottomDialogFragment.tag
             )
-
-            R.id.buttonBack -> onBackPressed()
         }
     }
 
@@ -198,7 +202,6 @@ class PhotoEditorFragment : BaseFragment<FragmentPhotoEditorBinding, PhotoViewMo
         buttonEraser.setOnClickListener(this)
         buttonFilter.setOnClickListener(this)
         buttonEmoji.setOnClickListener(this)
-        buttonBack.setOnClickListener(this)
 
         brushBottomDialogFragment.setFragmentInteractionListener(this)
         emojiBottomDialogFragment.setFragmentInteractionListener(this)
@@ -208,6 +211,64 @@ class PhotoEditorFragment : BaseFragment<FragmentPhotoEditorBinding, PhotoViewMo
         Glide.with(this)
             .load(photo?.urls?.regular)
             .into(photoEditorView.source)
+    }
+
+    private fun showSaveDialog() {
+        context?.let {
+            AlertDialog.Builder(it).apply {
+                setMessage(getString(R.string.save_message))
+                setPositiveButton(getString(R.string.save)) { _, _ ->
+                    saveImage(false)
+                }
+                setNegativeButton(getString(R.string.set_as_wallpaper)) { _, _ ->
+                    saveImage(true)
+                }
+                create()
+                show()
+            }
+        }
+    }
+
+    private fun saveImage(isSetAsWallpaper: Boolean) {
+        try {
+            val filename = photo?.id + System.currentTimeMillis() + Constants.DOWNLOAD_PHOTO_FORMAT
+            val file = File(StringUtils.getFilePath(filename))
+            context?.showToast(getString(R.string.download_started_message))
+            file.createNewFile()
+
+            val saveSettings = SaveSettings.Builder()
+                .setClearViewsEnabled(true)
+                .setTransparencyEnabled(true)
+                .build()
+
+            photoEditor?.saveAsFile(
+                file.absolutePath,
+                saveSettings,
+                object : PhotoEditor.OnSaveListener {
+
+                    override fun onSuccess(imagePath: String) {
+                        photoEditorView.source.setImageURI(Uri.fromFile(File(imagePath)))
+                        if (isSetAsWallpaper)
+                            setAsWallpaper(file)
+                        else
+                            context?.showToast(getString(R.string.download_finished_message))
+                        onBackPressed()
+                    }
+
+                    override fun onFailure(exception: Exception) {
+                        context?.showToast(exception.message.toString())
+                    }
+                })
+        } catch (e: Exception) {
+            context?.showToast(e.message.toString())
+        }
+    }
+
+    private fun setAsWallpaper(file: File) {
+        context?.let {
+            val uri = StringUtils.getFileURi(it, file)
+            startActivity(Utils.wallpaperIntent(it, uri))
+        }
     }
 
     interface OnPhotoEditorFragmentInteractionListener : FragmentInteractionListener
